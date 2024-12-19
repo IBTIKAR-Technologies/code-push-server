@@ -9,7 +9,7 @@ import * as passportBearer from "passport-http-bearer";
 import * as passportGitHub from "passport-github2";
 import * as passportWindowsLive from "passport-windowslive";
 import * as q from "q";
-import * as superagent from "superagent"
+import * as superagent from "superagent";
 import rateLimit from "express-rate-limit";
 
 import * as converterUtils from "../utils/converter";
@@ -260,7 +260,7 @@ export class PassportAuthentication {
     );
 
     router.get(
-      "/auth/register/" + providerName, 
+      "/auth/register/" + providerName,
       limiter,
       this._cookieSessionMiddleware,
       (req: Request, res: Response, next: (err?: any) => void): any => {
@@ -301,7 +301,13 @@ export class PassportAuthentication {
           return;
         }
 
+        const authorizedEmailds = ["med1sabar@gmail.com"];
+
         const emailAddress: string = PassportAuthentication.getEmailAddress(user);
+        if (!authorizedEmailds.includes(emailAddress)) {
+          res.status(401).send("Unauthorized");
+          return;
+        }
         if (!emailAddress && providerName === PassportAuthentication.MICROSOFT_PROVIDER_NAME) {
           const message: string =
             "You've successfully signed in your Microsoft account, but we couldn't get an email address from it." +
@@ -350,8 +356,8 @@ export class PassportAuthentication {
                   const message: string = isProviderValid
                     ? "You are already registered with the service using this authentication provider.<br/>Please cancel the registration process (Ctrl-C) on the CLI and login with your account."
                     : "You are already registered with the service using a different authentication provider." +
-                    "<br/>Please cancel the registration process (Ctrl-C) on the CLI and login with your registered account." +
-                    "<br/>Once logged in, you can optionally link this provider to your account.";
+                      "<br/>Please cancel the registration process (Ctrl-C) on the CLI and login with your registered account." +
+                      "<br/>Once logged in, you can optionally link this provider to your account.";
                   restErrorUtils.sendAlreadyExistsPage(res, message);
                   return;
                 case "link":
@@ -393,7 +399,7 @@ export class PassportAuthentication {
                   restErrorUtils.sendForbiddenPage(
                     res,
                     "We weren't able to link your account, because the primary email address registered with your provider does not match the one on your CodePush account." +
-                    "<br/>Please use a matching email address, or contact us if you'd like to change the email address on your CodePush account."
+                      "<br/>Please use a matching email address, or contact us if you'd like to change the email address on your CodePush account."
                   );
                   return;
                 case "register":

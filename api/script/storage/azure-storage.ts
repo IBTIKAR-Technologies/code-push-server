@@ -855,12 +855,13 @@ export class AzureStorage implements storage.Storage {
     let tableClient: TableClient;
     let blobServiceClient: BlobServiceClient;
 
+    console.log("Setting up Azure Storage");
     if (process.env.EMULATED) {
-      const devConnectionString = "UseDevelopmentStorage=true";
+      const AZURE_STORAGE_URL = `BlobEndpoint=${process.env.AZURE_STORAGE_URL};TableEndpoint=${process.env.AZURE_TABLE_URL};`;
 
-      tableServiceClient = TableServiceClient.fromConnectionString(devConnectionString);
-      tableClient = TableClient.fromConnectionString(devConnectionString, AzureStorage.TABLE_NAME);
-      blobServiceClient = BlobServiceClient.fromConnectionString(devConnectionString);
+      tableServiceClient = TableServiceClient.fromConnectionString(AZURE_STORAGE_URL);
+      tableClient = TableClient.fromConnectionString(AZURE_STORAGE_URL, AzureStorage.TABLE_NAME);
+      blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_URL);
     } else {
       if ((!accountName && !process.env.AZURE_STORAGE_ACCOUNT) || (!accountKey && !process.env.AZURE_STORAGE_ACCESS_KEY)) {
         throw new Error("Azure credentials not set");
@@ -1093,7 +1094,7 @@ export class AzureStorage implements storage.Storage {
 
         return q.allSettled(removalPromises);
       })
-      .then(() => { });
+      .then(() => {});
   }
 
   private updateAppWithPermission(accountId: string, app: storage.App, updateCollaborator: boolean = false): q.Promise<void> {
@@ -1175,8 +1176,9 @@ export class AzureStorage implements storage.Storage {
       queryOptions: { filter: query },
     })) {
       if (entity.partitionKeyPointer && entity.partitionKeyPointer !== "" && entity.rowKeyPointer && entity.rowKeyPointer !== "") {
-        const childQuery = odata`PartitionKey eq ${entity.partitionKeyPointer} and (RowKey eq ${entity.rowKeyPointer
-          } or (RowKey gt ${childrenSearchKey} and RowKey lt ${childrenSearchKey + "~"}))`;
+        const childQuery = odata`PartitionKey eq ${entity.partitionKeyPointer} and (RowKey eq ${
+          entity.rowKeyPointer
+        } or (RowKey gt ${childrenSearchKey} and RowKey lt ${childrenSearchKey + "~"}))`;
 
         promises.push(this.getLeafEntities(childQuery, childrenSearchKey));
       } else {
@@ -1220,8 +1222,9 @@ export class AzureStorage implements storage.Storage {
     }
 
     // Fetch both the parent (for error-checking purposes) and the direct children
-    const query = odata`PartitionKey eq ${partitionKey} and (RowKey eq ${rowKey} or (RowKey gt ${childrenSearchKey} and RowKey lt ${childrenSearchKey + "~"
-      }))`;
+    const query = odata`PartitionKey eq ${partitionKey} and (RowKey eq ${rowKey} or (RowKey gt ${childrenSearchKey} and RowKey lt ${
+      childrenSearchKey + "~"
+    }))`;
 
     const entities: TableEntity[] = await this.getLeafEntities(query, childrenSearchKey);
 

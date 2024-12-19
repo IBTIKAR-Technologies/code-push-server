@@ -1,0 +1,83 @@
+version: "3.9"
+
+services:
+  traefik:
+    image: traefik:v2.10
+    command:
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=med1sabar@gmail.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./letsencrypt:/letsencrypt"
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.codepush.rule=Host(`codepush.ibtikar-tech.com`)"
+      - "traefik.http.services.codepush.loadbalancer.server.port=3000"
+      - "traefik.http.routers.codepush.tls.certresolver=myresolver"
+    ports:
+      - "3000:3000"
+    environment:
+      - SERVER_URL=https://codepush.ibtikar-tech.com
+      - EMULATED=true
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - LOGGING=false
+      - REDIS_HOST=https://redis.ibtikar-tech.com
+      - REDIS_PORT=6379
+      - TEST_AZURE_STORAGE=false
+      - DISABLE_ACQUISITION=false
+      - DISABLE_MANAGEMENT=false
+      - ENABLE_ACCOUNT_REGISTRATION=true
+      - UPLOAD_SIZE_LIMIT_MB=200
+      - ENABLE_PACKAGE_DIFFING=false
+      - REFRESH_CREDENTIALS_INTERVAL=86400000
+      - AZURE_STORAGE_URL=https://azurite-blob.ibtikar-tech.com
+      - AZURE_TABLE_URL=https://azurite-table.ibtikar-tech.com
+    depends_on:
+      - azurite
+      - redis
+
+  redis:
+    image: redis:alpine
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redis.rule=Host(`redis.ibtikar-tech.com`)"
+      - "traefik.http.services.redis.loadbalancer.server.port=6379"
+      - "traefik.http.routers.redis.tls.certresolver=myresolver"
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.azurite-table.rule=Host(`azurite-table.ibtikar-tech.com`)"
+      - "traefik.http.routers.azurite-blob.rule=Host(`azurite-blob.ibtikar-tech.com`)"
+      - "traefik.http.services.azurite-table.loadbalancer.server.port=10002"
+      - "traefik.http.services.azurite-blob.loadbalancer.server.port=10001"
+      - "traefik.http.routers.azurite-table.tls.certresolver=myresolver"
+      - "traefik.http.routers.azurite-blob.tls.certresolver=myresolver"
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+    volumes:
+      - azurite_data:/data
+
+volumes:
+  redis_data:
+  azurite_data:
